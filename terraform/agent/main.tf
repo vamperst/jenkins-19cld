@@ -1,0 +1,103 @@
+# Specify the provider and access details
+provider "aws" {
+  region = "${var.aws_region}"
+}
+
+variable "project" {
+  default = "18cld"
+}
+
+data "aws_vpc" "vpc" {
+  tags {
+    Name = "${var.project}"
+  }
+}
+
+data "aws_subnet_ids" "all" {
+  vpc_id = "${data.aws_vpc.vpc.id}"
+
+  tags {
+    Tier = "Public"
+  }
+}
+
+data "aws_subnet" "public" {
+  count = "${length(data.aws_subnet_ids.all.ids)}"
+  id    = "${data.aws_subnet_ids.all.ids[count.index]}"
+}
+
+resource "random_shuffle" "random_subnet" {
+  input        = ["${data.aws_subnet.public.*.id}"]
+  result_count = 1
+}
+
+data "aws_instance" "jenkins_master" {
+  instance_tags {
+    Stage = "${var.stage}"
+    Version = "${var.version}"
+    Jenkins = "master"
+  }
+}
+
+data "template_file" "jenkis-agent" {
+  template = "${file("${path.module}/script-jenkins-agent.sh")}"
+  vars = {
+    ip_master = "${data.aws_instance.jenkins_master.private_ip}",
+    USERNAME = "admin",
+    PASSWORD = "12345678"
+  }
+}
+
+
+resource "aws_instance" "jenkins_agent" {
+  instance_type = "t2.micro"
+  ami           = "${lookup(var.aws_amis, var.aws_region)}"
+
+  count = 1
+
+  subnet_id              = "${random_shuffle.random_subnet.result[0]}"
+  vpc_security_group_ids = ["${aws_security_group.jenkins-agent.id}"]
+  key_name               = "${var.KEY_NAME}"
+  iam_instance_profile = "${aws_iam_instance_profile.jenkins-agent.id}"
+
+  provisioner "file" {
+    content      = "${data.template_file.jenkis-agent.rendered}"
+    destination = "/tmp/script-jenkins-agent.sh"
+}
+
+  provisioner "file" {
+    source      = "/Users/rafaelbarbosa/.aws/config"
+    destination = "/tmp/config"
+  }
+
+  provisioner "file" {
+    source      = "jenkins.service"
+    destination = "/tmp/jenkins.service"
+  }
+
+provisioner "remote-exec" {
+    inline = [
+      "sudo cp /tmp/jenkins.service /etc/systemd/system/jenkins.service"
+    ]
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /tmp/script-jenkins-agent.sh",
+      "sudo /tmp/script-jenkins-agent.sh",
+    ]
+  }
+
+  
+
+  connection {
+    user        = "${var.INSTANCE_USERNAME}"
+    private_key = "${file("${var.PATH_TO_KEY}")}"
+  }
+
+  tags {
+    Name = "${format("jenkins-agent-%03d", count.index + 1)}"
+    Stage = "${var.stage}"
+    Version = "${var.version}"
+  }
+}
