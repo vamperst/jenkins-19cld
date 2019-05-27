@@ -50,11 +50,15 @@ data "template_file" "jenkis-agent" {
 
 
 resource "aws_instance" "jenkins_agent" {
-  instance_type = "t2.micro"
+  instance_type = "t2.medium"
   ami           = "${lookup(var.aws_amis, var.aws_region)}"
 
   count = 1
-
+  root_block_device {
+    volume_size = 40
+    delete_on_termination = true
+  }
+  
   subnet_id              = "${random_shuffle.random_subnet.result[0]}"
   vpc_security_group_ids = ["${aws_security_group.jenkins-agent.id}"]
   key_name               = "${var.KEY_NAME}"
