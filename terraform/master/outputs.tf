@@ -1,3 +1,3 @@
-output "address_agent" {
-  value = "${aws_instance.jenkins_master.public_dns}"
+output "address_master" {
+  value = "jenkins: ${aws_instance.jenkins_master.public_dns}:8080"
 }
