@@ -40,7 +40,7 @@
     "vue-router": "^3.0.1",
     "vue-server-renderer": "^2.5.3",
     "webpack": "^2.7.0",
-    "webpack-dev-server": "^2.5.0",
+    "webpack-dev-server": "^3.1.11",
     "whatwg-fetch": "^2.0.3",
     "write-file-webpack-plugin": "^4.2.0"
   }
