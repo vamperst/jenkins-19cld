@@ -49,7 +49,7 @@ resource "aws_instance" "jenkins_master" {
 }
 
   provisioner "file" {
-    source      = "/Users/rafaelbarbosa/.aws/config"
+    source      = "/home/vagrant/.aws/config"
     destination = "/tmp/config"
   }
 

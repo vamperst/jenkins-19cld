@@ -70,7 +70,7 @@ resource "aws_instance" "jenkins_agent" {
 }
 
   provisioner "file" {
-    source      = "/Users/rafaelbarbosa/.aws/config"
+    source      = "/home/vagrant/.aws/config"
     destination = "/tmp/config"
   }
 
